@@ -18,7 +18,6 @@ stock_params = {
 
 parameters_news = {
     "q": COMPANY_NAME,
-    "from": "2022-02-17",
     "sortBy": "popularity",
     "apikey": NEWS_API_KEY,
 }
