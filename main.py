@@ -1,5 +1,5 @@
 import requests
-import time
+from twilio.rest import Client
 
 STOCK_NAME = "TSLA"
 COMPANY_NAME = "Tesla Inc"
@@ -7,66 +7,76 @@ COMPANY_NAME = "Tesla Inc"
 STOCK_ENDPOINT = "https://www.alphavantage.co/query"
 NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 
-API_KEY = "BSBEGAP9CKNT713L"
+STOCK_API_KEY = "BSBEGAP9CKNT713L"
+NEWS_API_KEY = "e9c1830ec1fb4d2a9238085d07bc7008"
 
-parameter = {
-    "function": "TIME_SERIES_INTRADAY",
-    "symbol": "TSLA",
-    "interval": "60min",
-    "apikey": API_KEY,
+stock_params = {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": STOCK_NAME,
+    "apikey": STOCK_API_KEY,
 }
 
-    ## STEP 1: Use https://www.alphavantage.co/documentation/#daily
+parameters_news = {
+    "q": COMPANY_NAME,
+    "from": "2022-02-17",
+    "sortBy": "popularity",
+    "apikey": NEWS_API_KEY,
+}
+
+## STEP 1: Use https://www.alphavantage.co/documentation/#daily
 # When stock price increase/decreases by 5% between yesterday and the day before yesterday then print("Get News").
 
-#TODO 1. - Get yesterday's closing stock price. Hint: You can perform list comprehensions on Python dictionaries. e.g. [new_value for (key, value) in dictionary.items()]
-response = requests.get(STOCK_ENDPOINT, params=parameter)
+response = requests.get(STOCK_ENDPOINT, params=stock_params)
 
-stock_data = response.json()["Time Series (60min)"]
-# ["2022-02-15 20:00:00"]
+data = response.json()["Time Series (Daily)"]
+data_list = [value for (key, value) in data.items()]
+print(data_list)
 
-stock_list = list(stock_data.items())
-
-today_price = stock_list[1][1]['4. close']
-yesterday_price = stock_list[25][1]['4. close']
-
-print(today_price)
-print(yesterday_price)
+price_list = [item["4. close"] for item in data_list]
+print(price_list)
 
 
-#TODO 2. - Get the day before yesterday's closing stock price
+today_price = float(price_list[0])
+yesterday_price = float(price_list[1])
 
-#TODO 3. - Find the positive difference between 1 and 2. e.g. 40 - 20 = -20, but the positive difference is 20. Hint: https://www.w3schools.com/python/ref_func_abs.asp
+price_diff = abs(today_price - yesterday_price)
+price_diff_percent = int(price_diff / today_price * 100)
 
-#TODO 4. - Work out the percentage difference in price between closing price yesterday and closing price the day before yesterday.
-
-#TODO 5. - If TODO4 percentage is greater than 5 then print("Get News").
-
-    ## STEP 2: https://newsapi.org/ 
-    # Instead of printing ("Get News"), actually get the first 3 news pieces for the COMPANY_NAME. 
-
-#TODO 6. - Instead of printing ("Get News"), use the News API to get articles related to the COMPANY_NAME.
-
-#TODO 7. - Use Python slice operator to create a list that contains the first 3 articles. Hint: https://stackoverflow.com/questions/509211/understanding-slice-notation
+if True:  # price_diff_percent >= 5:
+    print("get news")
 
 
-    ## STEP 3: Use twilio.com/docs/sms/quickstart/python
-    #to send a separate message with each article's title and description to your phone number. 
+# TODO 6. - Instead of printing ("Get News"), use the News API to get articles related to the COMPANY_NAME.
+response = requests.get(NEWS_ENDPOINT, params=parameters_news)
 
-#TODO 8. - Create a new list of the first 3 article's headline and description using list comprehension.
+articles = response.json()['articles']
+news = [f"{STOCK_NAME}: 🔺{price_diff_percent*100}%\n"\
+        f"Headline: {item['title']}\n"\
+        f"Brief: {item['description']}\n"
+        for item in articles]
+top3_news = news[:3]
 
-#TODO 9. - Send each article as a separate message via Twilio. 
+print(top3_news)
 
+account_sid = "AC5d5d1d3bed511b084991b20279367956"
+auth_token = "bf1a4bbc9aec73990980c06f096e76a1"
 
+if True:  # need_to_bring_umbrella:
+    client = Client(account_sid, auth_token)
+    message = client.messages.create(
+        body=top3_news,
+        from_='+18596952590',
+        to='+821023309854'
+    )
+    print(message.status)
 
-#Optional TODO: Format the message like this: 
+# Optional TODO: Format the message like this:
 """
 TSLA: 🔺2%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
+Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?.
 Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
 or
 "TSLA: 🔻5%
-Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?. 
+Headline: Were Hedge Funds Right About Piling Into Tesla Inc. (TSLA)?.
 Brief: We at Insider Monkey have gone over 821 13F filings that hedge funds and prominent investors are required to file by the SEC The 13F filings show the funds' and investors' portfolio positions as of March 31st, near the height of the coronavirus market crash.
 """
-
